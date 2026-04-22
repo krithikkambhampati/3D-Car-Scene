@@ -1,0 +1,7 @@
+1. the color lights are not giving too muhc color on the ground(the should look at the nearest point ont he road remember) currenlt its falling on ceiling of building only
+2. the street light pole is not connected to the actual light ut self, the connect thing is a few spaces up(the z cord is wrong i think)
+3. one building has a random rectangle to its side remove it 
+5try to add trees witht he correct texture and correct texture for leaves also make it collion on 
+option to toggle street light
+the light camera is not too good currently
+at last suggest some nice features that would make the project more god
