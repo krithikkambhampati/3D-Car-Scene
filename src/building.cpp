@@ -63,6 +63,19 @@ static void draw_window_strip(const Building& b,
     float tangentX = -faceNZ;
     float tangentZ =  faceNX;
     float facadeSpan = (fabsf(faceNX) > 0.5f) ? b.depth : b.width;
+    const bool faceOnX = fabsf(faceNX) > 0.5f;
+
+    auto draw_oriented_part = [&](float cx, float cy, float cz,
+                                  float alongFacade, float sy, float thickness,
+                                  float cr, float cg, float cb, float shininess) {
+        float sx = faceOnX ? thickness : alongFacade;
+        float sz = faceOnX ? alongFacade : thickness;
+        draw_slab_part(b, meshes, shader,
+                       cx, cy, cz,
+                       sx, sy, sz,
+                       cr, cg, cb,
+                       shininess, false);
+    };
 
     for (int w = 0; w < count; w++) {
         float t = count == 1 ? 0.f : ((float)w / (float)(count - 1)) * 2.f - 1.f;
@@ -70,45 +83,43 @@ static void draw_window_strip(const Building& b,
         float wz = b.posZ + faceNZ * faceOffset + tangentZ * t * facadeSpan * 0.32f;
         
         // Window frame (outer border)
-        draw_slab_part(b, meshes, shader,
-                       wx, y, wz,
-                       width, height, 0.06f,
-                       0.40f + tint, 0.55f + tint * 0.7f, 0.72f + tint * 0.4f,
-                       72.f, false);
+        draw_oriented_part(wx, y, wz,
+                           width, height, 0.06f,
+                           0.40f + tint, 0.55f + tint * 0.7f, 0.72f + tint * 0.4f,
+                           72.f);
         
         // Window frame surround (darker frame)
-        draw_slab_part(b, meshes, shader,
-                       wx - faceNX * 0.05f, y, wz - faceNZ * 0.05f,
-                       width + 0.10f, height + 0.10f, 0.02f,
-                       0.14f, 0.16f, 0.20f, 20.f, false);
+        draw_oriented_part(wx - faceNX * 0.05f, y, wz - faceNZ * 0.05f,
+                           width + 0.10f, height + 0.10f, 0.02f,
+                           0.14f, 0.16f, 0.20f, 20.f);
         
         // Window panes (glass effect with subtle divisions)
         float paneW = width * 0.42f;
         float paneH = height * 0.42f;
         // Left pane
-        draw_slab_part(b, meshes, shader,
-                       wx - paneW * 0.5f, y, wz,
-                       paneW, paneH, 0.04f,
-                       0.55f + tint * 0.3f, 0.68f + tint * 0.2f, 0.82f + tint * 0.3f,
-                       88.f, false);
+        draw_oriented_part(wx - tangentX * paneW * 0.5f,
+                           y,
+                           wz - tangentZ * paneW * 0.5f,
+                           paneW, paneH, 0.04f,
+                           0.55f + tint * 0.3f, 0.68f + tint * 0.2f, 0.82f + tint * 0.3f,
+                           88.f);
         // Right pane
-        draw_slab_part(b, meshes, shader,
-                       wx + paneW * 0.5f, y, wz,
-                       paneW, paneH, 0.04f,
-                       0.50f + tint * 0.3f, 0.65f + tint * 0.2f, 0.80f + tint * 0.3f,
-                       88.f, false);
+        draw_oriented_part(wx + tangentX * paneW * 0.5f,
+                           y,
+                           wz + tangentZ * paneW * 0.5f,
+                           paneW, paneH, 0.04f,
+                           0.50f + tint * 0.3f, 0.65f + tint * 0.2f, 0.80f + tint * 0.3f,
+                           88.f);
         
         // Window sill (horizontal trim below window)
-        draw_slab_part(b, meshes, shader,
-                       wx, y - height * 0.6f, wz,
-                       width + 0.08f, 0.06f, 0.08f,
-                       0.25f, 0.20f, 0.14f, 24.f, false);
+        draw_oriented_part(wx, y - height * 0.6f, wz,
+                           width + 0.08f, 0.06f, 0.08f,
+                           0.25f, 0.20f, 0.14f, 24.f);
         
         // Window lintel (horizontal trim above window)
-        draw_slab_part(b, meshes, shader,
-                       wx, y + height * 0.6f, wz,
-                       width + 0.08f, 0.06f, 0.08f,
-                       0.25f, 0.20f, 0.14f, 24.f, false);
+        draw_oriented_part(wx, y + height * 0.6f, wz,
+                           width + 0.08f, 0.06f, 0.08f,
+                           0.25f, 0.20f, 0.14f, 24.f);
     }
 }
 
@@ -155,7 +166,8 @@ void buildings_init(Building* buildings, int count,
 
 void building_draw(const Building& b,
                    const BuildingMeshes& meshes,
-                   GLuint shader)
+                   GLuint shader,
+                   GLuint emissiveShader)
 {
     // Main body
     draw_slab_part(b, meshes, shader,
@@ -299,5 +311,91 @@ void building_draw(const Building& b,
         if (b.styleId != 2) {
             draw_window_strip(b, meshes, shader, wy, 2, 0.52f, 0.58f, sideNX, sideNZ, sideOffset, tint * 0.6f);
         }
+    }
+
+    // Render emissive windows when they are turned on
+    if (b.windowsOn && emissiveShader && b.windowIntensity > 0.01f) {
+        glUseProgram(emissiveShader);
+        float model[16];
+        float T[16], S[16];
+        const float emissiveBias = 0.035f; // push outward to avoid z-fighting with glass panes
+
+        // Yellow window light with flicker intensity
+        float emissiveIntensity = b.windowIntensity;
+        float emissiveR = 1.0f * emissiveIntensity;
+        float emissiveG = 0.95f * emissiveIntensity;
+        float emissiveB = 0.5f * emissiveIntensity;
+
+        // Get the view and projection matrices from the normal shader
+        // (they should be the same)
+        mat_translate(T, 0.f, 0.f, 0.f);
+        mat_scale(S, 1.f, 1.f, 1.f);
+        mat_mul(model, T, S);
+
+        setMat4(emissiveShader, "uModel", model);
+        setVec4(emissiveShader, "uColor", emissiveR, emissiveG, emissiveB, 0.9f * emissiveIntensity);
+
+        // Render windows for all floors
+        for (int fl = 0; fl < floors; fl++) {
+            float wy = 1.8f + fl * 3.0f;
+            float ww = (b.styleId == 2) ? 1.1f : 0.72f;
+            float wh = (b.styleId == 1) ? 0.55f : 0.65f;
+
+            auto draw_emissive_strip = [&](float faceNX, float faceNZ,
+                                           float faceOffset,
+                                           int count,
+                                           float stripW,
+                                           float stripH) {
+                float tangentX = -faceNZ;
+                float tangentZ =  faceNX;
+                float facadeSpan = (fabsf(faceNX) > 0.5f) ? b.depth : b.width;
+
+                for (int w = 0; w < count; w++) {
+                    float t = count == 1 ? 0.f : ((float)w / (float)(count - 1)) * 2.f - 1.f;
+                    float wx = b.posX + faceNX * faceOffset + tangentX * t * facadeSpan * 0.32f;
+                    float wz = b.posZ + faceNZ * faceOffset + tangentZ * t * facadeSpan * 0.32f;
+                    float ex = wx + faceNX * emissiveBias;
+                    float ez = wz + faceNZ * emissiveBias;
+
+                    float paneW = stripW * 0.42f;
+                    float paneH = stripH * 0.42f;
+
+                    // Left pane along facade tangent
+                    float leftX = ex - tangentX * paneW * 0.5f;
+                    float leftZ = ez - tangentZ * paneW * 0.5f;
+                    float sx = (fabsf(faceNX) > 0.5f) ? 0.04f : paneW;
+                    float sz = (fabsf(faceNX) > 0.5f) ? paneW : 0.04f;
+                    mat_translate(T, leftX, wy, leftZ);
+                    mat_scale(S, sx, paneH, sz);
+                    mat_mul(model, T, S);
+                    setMat4(emissiveShader, "uModel", model);
+                    mesh_draw(meshes.slab);
+
+                    // Right pane along facade tangent
+                    float rightX = ex + tangentX * paneW * 0.5f;
+                    float rightZ = ez + tangentZ * paneW * 0.5f;
+                    mat_translate(T, rightX, wy, rightZ);
+                    mat_scale(S, sx, paneH, sz);
+                    mat_mul(model, T, S);
+                    setMat4(emissiveShader, "uModel", model);
+                    mesh_draw(meshes.slab);
+                }
+            };
+
+            // Front windows
+            draw_emissive_strip(frontNX, frontNZ, frontOffset, windowsPerFloor, ww, wh);
+
+            // Back windows for styles that have them
+            if (b.styleId == 0 || b.styleId == 3) {
+                draw_emissive_strip(-frontNX, -frontNZ, frontOffset, 2, 0.56f, 0.56f);
+            }
+
+            // Side windows (if applicable)
+            if (b.styleId != 2) {
+                draw_emissive_strip(sideNX, sideNZ, sideOffset, 2, 0.52f, 0.58f);
+            }
+        }
+
+        glUseProgram(shader); // Switch back to main shader
     }
 }

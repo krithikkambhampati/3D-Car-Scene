@@ -66,6 +66,7 @@ int main() {
               << "  w / Shift+W    : increase / decrease fan speed\n"
               << "  h              : toggle car headlights\n"
               << "  t              : toggle street lights\n"
+              << "  b              : toggle building windows (flicker in storms)\n"
               << "  y              : toggle thunderstorm mode\n"
               << "  1-5            : switch camera (sky/car/ground/light/heli)\n"
               << "  q / e          : ground-cam look left / right\n"

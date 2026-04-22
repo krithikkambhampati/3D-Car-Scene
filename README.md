@@ -19,6 +19,7 @@ make
 | **Shift+W** | Decrease Fan Speed |
 | **H** | Toggle car headlights |
 | **T** | Toggle street lights |
+| **B** | Toggle building window lights |
 | **Y** | Toggle thunderstorm mode |
 | **Backspace** | Reset car to start position |
 | **Esc** | Quit application |

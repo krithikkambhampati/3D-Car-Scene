@@ -239,9 +239,20 @@ void world_update(World& w, float dt) {
             float wave = 0.80f + 0.20f * sinf(w.sceneTime * 34.f + 3.7f);
             w.streetLightFlicker = clamp01(wave * dip);
             w.streetLightFlicker = std::max(0.05f, w.streetLightFlicker);
+
+            // Window flicker during storm
+            int windowFlickBucket = (int)(w.sceneTime * 42.f);
+            float windowNoise = hash01(windowFlickBucket * 17 + 19);
+            float windowDip = (windowNoise < (0.12f + 0.22f * w.stormBlend))
+                            ? (0.15f + 0.28f * hash01(windowFlickBucket * 9 + 7))
+                            : 1.f;
+            float windowWave = 0.75f + 0.25f * sinf(w.sceneTime * 28.f + 2.3f);
+            w.windowFlickerIntensity = clamp01(windowWave * windowDip);
+            w.windowFlickerIntensity = std::max(0.15f, w.windowFlickerIntensity);
         } else {
             w.lightningFlash = std::max(0.f, w.lightningFlash - dt * 3.2f);
             w.streetLightFlicker = 1.f;
+            w.windowFlickerIntensity = 1.f;  // Full intensity when no storm
             if (w.lightningCooldown < 0.8f) w.lightningCooldown = 0.8f;
         }
     }
@@ -271,6 +282,15 @@ void world_update(World& w, float dt) {
     for (int i = 0; i < NUM_BUILDINGS; i++) {
         fan_update(w.fans[i], simDt);
         spotlight_update(w.spotlights[i], simDt);
+        
+        // Update building window intensity based on world state
+        if (w.buildingWindowsOn) {
+            w.buildings[i].windowsOn = true;
+            w.buildings[i].windowIntensity = w.windowFlickerIntensity;
+        } else {
+            w.buildings[i].windowsOn = false;
+            w.buildings[i].windowIntensity = 0.f;
+        }
     }
 
     // During replay, drive the car transform from recorded states.
@@ -360,8 +380,9 @@ void world_update(World& w, float dt) {
         }
 
         for (int i = 0; i < NUM_BUILDINGS && !crashed; i++) {
-            if (circle_rect_overlap(w.car.posX, w.car.posZ, CAR_RADIUS,
-                                    w.buildings[i].footprint)) {
+            if (obb_rect_overlap(w.car.posX, w.car.posZ, w.car.heading,
+                                CAR_HALF_W, CAR_HALF_H,
+                                w.buildings[i].footprint)) {
                 crashed = true;
             }
         }
@@ -865,6 +886,11 @@ void world_render(World& w, int screenW, int screenH) {
     eyeW[2] = -(view[8] * view[12] + view[9] * view[13] + view[10] * view[14]);
     Vec3 eyePos = {eyeW[0], eyeW[1], eyeW[2]};
 
+    // Prime emissive shader camera matrices before any per-building emissive draws.
+    glUseProgram(w.emissiveShader);
+    setMat4(w.emissiveShader, "uView",       view);
+    setMat4(w.emissiveShader, "uProjection", proj);
+
     // ---- Main shader pass ----
     glUseProgram(w.mainShader);
     setMat4(w.mainShader, "uView",       view);
@@ -880,7 +906,7 @@ void world_render(World& w, int screenW, int screenH) {
     draw_storm_ground_wetness(w);
     draw_trees(w);
     for (int i = 0; i < NUM_BUILDINGS; i++) {
-        building_draw(w.buildings[i], w.buildingMeshes, w.mainShader);
+        building_draw(w.buildings[i], w.buildingMeshes, w.mainShader, w.emissiveShader);
         fan_draw(w.fans[i], w.buildings[i], w.fanMeshes, w.mainShader);
         spotlight_draw_gimbal(w.spotlights[i], w.spotMeshes, w.mainShader);
     }
@@ -994,6 +1020,10 @@ void world_toggle_street_lights(World& w) {
 
 void world_toggle_storm(World& w) {
     w.stormEnabled = !w.stormEnabled;
+}
+
+void world_toggle_building_windows(World& w) {
+    w.buildingWindowsOn = !w.buildingWindowsOn;
 }
 
 bool world_storm_active(const World& w) {

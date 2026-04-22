@@ -37,15 +37,19 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
             break;
 
         case GLFW_KEY_H:
-            if (s_car) car_toggle_headlights(*s_car);
+            if (action == GLFW_PRESS && s_car) car_toggle_headlights(*s_car);
             break;
 
         case GLFW_KEY_T:
-            if (s_world) world_toggle_street_lights(*s_world);
+            if (action == GLFW_PRESS && s_world) world_toggle_street_lights(*s_world);
             break;
 
         case GLFW_KEY_Y:
-            if (s_world) world_toggle_storm(*s_world);
+            if (action == GLFW_PRESS && s_world) world_toggle_storm(*s_world);
+            break;
+
+        case GLFW_KEY_B:
+            if (action == GLFW_PRESS && s_world) world_toggle_building_windows(*s_world);
             break;
 
         // Camera modes
@@ -62,7 +66,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         // Reset world
         case GLFW_KEY_BACKSPACE:
         case GLFW_KEY_ENTER:
-            if (s_world) world_reset(*s_world);
+            if (action == GLFW_PRESS && s_world) world_reset(*s_world);
             break;
 
         case GLFW_KEY_ESCAPE: s_quit = true; break;

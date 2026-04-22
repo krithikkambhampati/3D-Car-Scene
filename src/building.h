@@ -26,6 +26,10 @@ struct Building {
     // Visual style controls (used to diversify facades)
     int styleId = 0;
     float accentR = 0.9f, accentG = 0.9f, accentB = 0.9f;
+
+    // Window lighting state
+    bool windowsOn = false;      // are windows currently lit?
+    float windowIntensity = 1.f; // flicker intensity (0-1) during storms
 };
 
 // Meshes shared by all buildings (created once)
@@ -40,4 +44,5 @@ void buildings_init(Building* buildings, int count,
 
 void building_draw(const Building& b,
                    const BuildingMeshes& meshes,
-                   GLuint shader);
+                   GLuint shader,
+                   GLuint emissiveShader = 0);

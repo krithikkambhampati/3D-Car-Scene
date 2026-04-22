@@ -101,6 +101,11 @@ struct World {
     int lightningSeed = 0;
     float streetLightFlicker = 1.f;
 
+    // Building window lighting
+    bool buildingWindowsOn = false;   // are building windows lit?
+    float windowFlickerPhase = 0.f;   // for flicker animation during storms
+    float windowFlickerIntensity = 1.f; // intensity varies with storm
+
     // Storm driving feel (slip / drift)
     float carVelX = 0.f;
     float carVelZ = 0.f;
@@ -115,4 +120,5 @@ void world_cleanup(World& w);
 void world_clear_color(const World& w, float& r, float& g, float& b);
 void world_toggle_street_lights(World& w);
 void world_toggle_storm(World& w);
+void world_toggle_building_windows(World& w);
 bool world_storm_active(const World& w);
