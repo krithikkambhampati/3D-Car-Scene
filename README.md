@@ -1,5 +1,16 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/t8noNzs3)
-## Building the Project
+# 3D Car Scene in Open GL
+
+This is an OpenGL 3.3 computer graphics project that renders a hierarchical city-road scene with a controllable car, dynamic lighting, weather effects, and multiple camera modes.
+
+## What the project includes
+
+- A drivable car with speed, steering, headlights, and crash replay behavior
+- Multiple camera modes: sky, car, ground, light source, and helicopter views
+- Procedural textures and lit 3D scene objects such as buildings, trees, streetlights, and walls
+- Storm mode with lightning, flicker, and reduced visibility effects
+- Mouse-based free-look orbit camera support
+
+## Build and run
 
 ```bash
 make clean
@@ -7,23 +18,40 @@ make
 ./app3d
 ```
 
-## Car Control Keys
+## Controls
 
 | Key | Action |
 |-----|--------|
-| **F** | Increase Speed |
-| **S** | Decrease Speed |
-| **L** | Turn Left |
-| **R** | Turn Right|
-| **W** | Increase Fan Speed |
-| **Shift+W** | Decrease Fan Speed |
+| **F** | Increase speed |
+| **S** | Decrease speed |
+| **L** | Turn left |
+| **R** | Turn right |
+| **W** | Increase fan speed |
+| **Shift+W** | Decrease fan speed |
 | **H** | Toggle car headlights |
 | **T** | Toggle street lights |
 | **B** | Toggle building window lights |
 | **Y** | Toggle thunderstorm mode |
-| **Backspace** | Reset car to start position |
-| **Esc** | Quit application |
+| **1–5** | Switch camera mode |
+| **Q / E** | Rotate the ground camera left / right |
+| **Backspace** | Reset the world |
+| **Esc** | Quit the application |
 
-### Mouse Controls
-- **Middle Mouse Drag**: Enter free-look orbit camera from the current view
-- **Mouse Wheel**: Zoom in/out while free-look camera is active
+### Mouse controls
+
+- **Middle mouse drag** — enter free-look orbit camera mode
+- **Mouse wheel** — zoom in or out in free-look mode
+
+## Repository layout
+
+- `main.cpp` — OpenGL setup and application loop
+- `src/` — scene objects, camera logic, collision, rendering, and input handling
+- `shaders/` — GLSL shader programs
+- `assets/` — textures and other supporting assets
+- `glad/` — GLAD loader source used by the build
+
+## Notes
+
+- The window title changes to show replay mode after a crash.
+- The scene uses shared world state for lighting, weather, and camera behavior.
+- Build output is the `app3d` executable; it should not be committed.
